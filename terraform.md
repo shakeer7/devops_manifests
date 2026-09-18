@@ -235,8 +235,14 @@ resource "aws_eip" "ip" {
 - `providers.tf` (Provider requirements)
 - Mention how you'd call this module in a parent `main.tf`.
 
-**Q: "What happens if you delete a resource manually in the AWS console that Terraform manages?"**
-*Answer:* The next time you run `terraform plan`, Terraform will compare the state file with the real world (via API calls). It will notice the resource is missing in the real world and will output a plan to *recreate* it.
+**Q: "What happens if the Terraform state file itself gets corrupted?"**
+*Answer:* First I stop concurrent changes and take a backup of the current state. I inspect whether the corruption is only local metadata or a broken remote state object, then recover from the backend version/history if available. I would not blindly run apply against a damaged state; I would restore the correct state, run `terraform plan`, compare it with the real environment, and only then resume deployment.
+
+**Q: "How would you handle drift between actual infrastructure and the Terraform state file?"**
+*Answer:* I treat drift as an operational signal. I run `terraform plan` against the correct workspace/account, identify whether the change was intentional or manual, and either import/update the configuration or revert the out-of-band change. In mature environments I reduce drift by restricting console changes, using pipeline-only writes and scheduling periodic plan checks.
+
+**Q: "How did you implement Policy as Code in your IaC pipeline?"**
+*Answer:* Policy as Code means evaluating the planned infrastructure against machine-readable rules before apply. I have used the pattern of Terraform plan -> JSON or scanner input -> policy engine such as OPA/Conftest, Sentinel, Checkov or tfsec -> fail the PR if mandatory controls are violated. Examples are disallowed public S3, unrestricted security groups, missing tags, unapproved regions and oversized instance types.
 
 **Q: "How do you manage secrets in Terraform?"**
 *Answer:* 

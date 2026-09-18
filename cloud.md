@@ -119,16 +119,17 @@ az group list --query "[?tags.Environment == null].name" -o tsv
 
 ## 6. Common Interview Questions
 
-**Q: "What is the difference between AWS Application Load Balancer (ALB) and Network Load Balancer (NLB)?"**
-*Answer:* 
-- **ALB (Layer 7):** Operates at the HTTP/HTTPS layer. It can read HTTP headers, URL paths, and cookies, making routing decisions based on them (e.g., route `/api` to one target group, `/web` to another). Great for web apps.
-- **NLB (Layer 4):** Operates at the TCP/UDP layer. It doesn't look at HTTP traffic. It is extremely fast, handles millions of requests per second with ultra-low latency, and provides a static IP address.
+**Q: "Scenario: Share an encrypted golden AMI across accounts/regions (Dev → QA → Prod) — is it possible, and how?"**
+*Answer:* Yes. The owning account can share an AMI with another account, but if it is encrypted, the KMS key policy also needs to permit the target account to use the key. For multi-region, I copy the AMI to the target region and configure the encrypted snapshot/key relationship there. I validate launch permissions, KMS permissions and the target account's ability to use the copied image before promoting it.
 
-**Q: "Explain how DNS (Route 53 or Azure DNS) routes traffic to a Load Balancer."**
-*Answer:* You create an `A` record (Alias in AWS) or a `CNAME` record in the DNS zone. It maps your custom domain (`app.company.com`) to the DNS name provided by the Cloud Provider's Load Balancer (e.g., `my-alb-123.us-east-1.elb.amazonaws.com`). 
+**Q: "Scenario: VPC peering is set up between two VPCs but instances still can’t communicate — what could be the issue?"**
+*Answer:* VPC peering is a private point-to-point connection between two VPCs. It works well for a small number of non-transitive connections where route tables and CIDRs are easy to manage. If instances cannot communicate, I check overlapping CIDRs, route tables on both sides, Security Groups, NACLs, DNS and whether the instances are using the expected private addresses. I also confirm that the peering connection is active in both VPC route domains.
 
-**Q: "How do you achieve High Availability (HA) for a database in the cloud?"**
-*Answer:* Use a managed service like AWS RDS or Azure SQL. Deploy it in a "Multi-AZ" (Multi-Availability Zone) configuration. The primary database runs in Zone A, and data is synchronously replicated to a standby instance in Zone B. If Zone A fails, the cloud provider automatically fails over the DNS endpoint to Zone B within minutes, with zero data loss.
+**Q: "Do you know about the OIDC provider in AWS?"**
+*Answer:* An AWS OIDC provider is a trust configuration that lets IAM validate OIDC tokens from an identity provider. In EKS, the cluster exposes an OIDC issuer and this is used by IRSA so a Kubernetes ServiceAccount can exchange its projected token for temporary AWS credentials through STS. The value is fine-grained workload identity without distributing static AWS keys.
+
+**Q: "What is the difference between Route 53 weighted and other routing policies, and which scenario would you use each in? How would you handle regional failover in an active-active setup?"**
+*Answer:* Route 53 weighted routing distributes traffic according to configured weights, useful for canary or controlled traffic splits. Failover routing is health-check driven and fits active-passive designs well. Latency routing is useful when you want users sent toward lower-latency regions; geolocation/geoproximity address location-based policies. For active-active regional failover, I use health-aware routing such as latency or weighted records plus application/data replication so both regions can serve traffic safely.
 
 ---
 

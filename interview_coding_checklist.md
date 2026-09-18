@@ -73,6 +73,7 @@ Use this checklist to verify your readiness for live coding or whiteboard rounds
 - [ ] Write an IAM policy (JSON) granting Least Privilege access.
 
 ## General Interview Advice
-1. **Think out loud:** Interviewers care more about *how* you debug or structure a problem than perfect syntax.
-2. **Start simple:** Build the MVP (Minimum Viable Product) script/config first, then add the error handling, loops, and security hardening.
-3. **Say "I don't know, but here is how I would find out":** If you forget the exact YAML syntax for a Kubernetes Volume, say you would use `kubectl explain pod.spec.volumes` or check the official docs.
+1. **The Interview Formula:** For scenario questions, use the structure: Situation -> decision -> implementation -> validation -> trade-off -> monitoring/rollback.
+2. **Think out loud:** Interviewers care more about *how* you debug or structure a problem than perfect syntax.
+3. **Start simple:** Build the MVP (Minimum Viable Product) script/config first, then add the error handling, loops, and security hardening.
+4. **Say "I don't know, but here is how I would find out":** If you forget the exact YAML syntax for a Kubernetes Volume, say you would use `kubectl explain pod.spec.volumes` or check the official docs.

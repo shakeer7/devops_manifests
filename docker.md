@@ -140,18 +140,48 @@ COPY . .
 RUN npm install
 CMD ["npm", "start"]
 ```
-**Solution:**
+**Solution (Refined for Production):**
 ```dockerfile
-FROM node:18
+# Option 1: Alpine (Very small, but uses musl libc which can cause issues with C++ addons)
+# FROM node:20-alpine 
+
+# Option 2: Debian Slim (Highly compatible, slightly larger)
+# FROM node:20-bookworm-slim
+
+# Option 3: Distroless (Ultimate security, no shell/OS utilities included)
+FROM gcr.io/distroless/nodejs20-debian11
+
+# --- Example using node:20-bookworm-slim for maximum compatibility ---
+FROM node:20-bookworm-slim
+
+# Set environment to production (optimizes many Node libraries)
+ENV NODE_ENV=production
+
+# Run as an unprivileged user (Debian node images have a built-in 'node' user)
+# Create directory and set ownership BEFORE switching users
 WORKDIR /app
-# Copy package files first
-COPY package*.json ./
-# Run install. This layer is cached unless package.json changes
-RUN npm install
-# Now copy source code
-COPY . .
-CMD ["npm", "start"]
+RUN chown node:node /app
+
+USER node
+
+# Copy package files and install exact production dependencies
+COPY --chown=node:node package*.json ./
+RUN npm ci --only=production
+
+# Copy application source securely
+COPY --chown=node:node . .
+
+# Expose port and run the app directly (not via npm, for proper signal handling)
+EXPOSE 3000
+CMD ["node", "src/index.js"]
 ```
+**Explanation:** 
+1. **Real Base Images:** We explicitly list working production images: `node:20-alpine` (lightweight), `node:20-bookworm-slim` (compatible), or `gcr.io/distroless/nodejs20-debian11` (ultra-secure). We use the `slim` variant here to avoid common Python/C++ compilation errors that occur with Alpine's `musl libc`.
+2. **Layer Caching:** We copy `package*.json` first so `npm ci` is cached unless dependencies change.
+3. **Deterministic Builds:** `npm ci` respects the `package-lock.json` exactly, preventing unexpected sub-dependency upgrades.
+4. **Security:** We drop root privileges by running as the non-root `node` user, and use `COPY --chown` to fix file permissions.
+5. **Performance:** `NODE_ENV=production` makes Express and other frameworks run up to 3x faster.
+6. **Signal Handling:** We run `node src/index.js` directly. `npm start` spawns a child process that doesn't pass SIGTERM signals correctly, meaning graceful shutdowns will fail in Kubernetes.
 
 ### Problem 2: Volume Mounting
 **Task:** Write a Docker command to run an `nginx` container, mapping port 80 to host port 8080, and mounting the local `./html` directory to `/usr/share/nginx/html`.

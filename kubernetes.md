@@ -243,8 +243,20 @@ StatefulSets are for stateful apps (databases, message queues). They provide sti
 - **Readiness:** Checks if the app is ready to serve traffic. If it fails, K8s stops sending traffic to it (removes it from Service endpoints).
 - **Startup:** Used for slow-starting legacy apps. Disables liveness/readiness until the startup probe passes.
 
-**Q: "How does Ingress differ from a LoadBalancer Service?"**
-*Answer:* A LoadBalancer service spins up a 1:1 cloud load balancer (e.g., AWS ALB/NLB) per service, which is expensive. Ingress is a K8s resource (backed by an Ingress Controller like NGINX) that provides HTTP/HTTPS routing rules based on path or host, allowing you to route traffic to multiple backend services using a single IP/Load Balancer.
+**Q: "How does Ingress differ from a LoadBalancer Service? What Ingress controllers have you worked with?"**
+*Answer:* A LoadBalancer service spins up a 1:1 cloud load balancer (e.g., AWS ALB/NLB) per service, which is expensive. Ingress is a K8s resource that provides HTTP/HTTPS routing rules based on path or host. In AWS EKS I have used the AWS Load Balancer Controller to translate Ingress resources into ALBs. I have also worked with NGINX Ingress, but for new platform designs in 2026 I would evaluate Gateway API or a supported controller because the open-source ingress-nginx project has been retired.
+
+**Q: "Are you aware the open-source Nginx Ingress controller is being retired — does this affect an ALB controller setup that underlies Nginx Ingress?"**
+*Answer:* No. The retirement of ingress-nginx does not mean the AWS Load Balancer Controller is retired. They are separate projects and architectures. If an environment uses AWS Load Balancer Controller to manage ALBs from Kubernetes Ingress resources, that controller is not inherently affected by ingress-nginx retirement. The retirement matters only if the cluster actually runs ingress-nginx. For 2026, I would plan migration to Gateway API or another supported controller.
+
+**Q: "How do you handle programmatic access to Kubernetes clusters without a password (RBAC, ServiceAccount, token)?"**
+*Answer:* For automation I use a dedicated ServiceAccount or, on EKS, a workload identity mechanism such as IRSA. The identity gets only the RBAC it needs through Role/RoleBinding or ClusterRole/ClusterRoleBinding. I avoid long-lived static tokens where possible and use projected, short-lived credentials and external identity integration.
+
+**Q: "If you want to implement Kubernetes RBAC plus IAM integration, what would be your approach?"**
+*Answer:* For human access, IAM authenticates the user and EKS maps that identity to Kubernetes authorization, using EKS access entries where supported or legacy aws-auth where still required. For workloads, I use ServiceAccounts plus IRSA or EKS Pod Identity and then Kubernetes RBAC for Kubernetes API permissions. IAM should control AWS APIs; Kubernetes RBAC should control Kubernetes APIs. I avoid merging those responsibilities into a single broad role.
+
+**Q: "If someone deletes the aws-auth ConfigMap, how would you recover?"**
+*Answer:* In 2026 I would treat `aws-auth` as legacy because EKS access entries are the recommended access mechanism. If a legacy cluster loses `aws-auth`, I use the cluster creator or another existing access path to restore the ConfigMap, following AWS's documented recovery procedure. If access entries are enabled, I prefer migrating user access to access entries so future recovery does not depend on editing the ConfigMap manually.
 
 ---
 
